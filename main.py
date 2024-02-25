@@ -3,12 +3,15 @@ import random
 import time
 from argparse import ArgumentParser
 from datetime import datetime, timezone
+from pathlib import Path
 from textwrap import dedent
 from typing import Generator
 
 import chrome
 import persistence
 from pair import Pair
+
+directory = Path(__file__).parent
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -218,7 +221,7 @@ with chrome.driver() as driver:
         )
 
         if new:
-            with open("discovered.txt", "a") as f:
+            with (directory / "discovered.txt").open("a") as f:
                 print(f"{datetime.now(timezone.utc).isoformat()} {pair}", file=f)
 
         time.sleep(0.25)
