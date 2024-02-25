@@ -1,6 +1,8 @@
 # Infinite Craft Explorer
 This code simply iterates through every possible combination of elements, and saves their pairings to your file system.
 
+![Code_U6R4XgkRl2](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/25b8c58b-14e8-4fd0-aff4-0cdd41492ea3)
+
 It provides three exploration strategies:
 - `random` Simply grabs two random elements and tests their pairing.
 - `depth` Prioritizes using newly-found elements. The goal is to arrive at new discoveries faster.
