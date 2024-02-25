@@ -1,3 +1,4 @@
 knowledge/
 .venv/
 __pycache__/
+discovered.txt

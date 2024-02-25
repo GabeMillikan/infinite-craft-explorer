@@ -2,6 +2,7 @@ import itertools
 import random
 import time
 from argparse import ArgumentParser
+from datetime import datetime, timezone
 from textwrap import dedent
 from typing import Generator
 
@@ -215,4 +216,9 @@ with chrome.driver() as driver:
             f"Explored {len(known_pairs):,d} / {len(known_elements) ** 2:,d} = {len(known_pairs) / len(known_elements)**2:.3%}",
             end="\r",
         )
+
+        if new:
+            with open("discovered.txt", "a") as f:
+                print(f"{datetime.now(timezone.utc).isoformat()} {pair}", file=f)
+
         time.sleep(0.25)
