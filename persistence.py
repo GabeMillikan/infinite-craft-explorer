@@ -1,64 +1,125 @@
-from pathlib import Path
+import sqlite3
+from typing import Generator
 
-from pair import Pair
-
-directory = Path(__file__).parent / "knowledge"
-directory.mkdir(exist_ok=True)
+from models import Element, Pair, PendingPair
 
 
-def encode_invalid_name(name: str) -> str:
-    return f"_{name.encode('utf-8').hex()}"
+def connect() -> sqlite3.Connection:
+    return sqlite3.connect("cache.sqlite")
 
 
-def decode_name(name: str) -> str:
-    if name.startswith("_"):
-        if name.startswith("__"):
-            return name[1:]
-        return bytes.fromhex(name[1:]).decode("utf-8")
-    return name
+with connect() as conn:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS element (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            name TEXT UNIQUE,
+            emoji TEXT
+        )
+        """,
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS pair (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            first_element_id INTEGER,
+            second_element_id INTEGER,
+            result_element_id INTEGER,
+            is_discovery INTEGER,
+            FOREIGN KEY (first_element_id) REFERENCES element (id),
+            FOREIGN KEY (second_element_id) REFERENCES element (id),
+            FOREIGN KEY (result_element_id) REFERENCES element (id)
+            UNIQUE(first_element_id, second_element_id)
+        )
+        """,
+    )
 
 
-def load_all() -> tuple[set[str], set[Pair]]:
-    known_elements: set[str] = set()
-    known_pairs: set[Pair] = set()
+def _upsert_element(conn: sqlite3.Connection, element: Element) -> None:
+    conn.execute(
+        """
+        INSERT INTO element (name, emoji)
+        VALUES (?, ?)
+        ON CONFLICT(name) DO UPDATE SET
+        emoji = excluded.emoji
+        """,
+        (element.name, element.emoji),
+    )
 
-    for first_known_element in directory.iterdir():
-        for second_known_element in first_known_element.iterdir():
-            with second_known_element.open() as f:
-                result = f.read()
-
-            known_elements.add(decode_name(first_known_element.name))
-            known_elements.add(decode_name(second_known_element.name))
-            known_elements.add(result)
-
-            known_pairs.add(
-                Pair(
-                    decode_name(first_known_element.name),
-                    decode_name(second_known_element.name),
-                    result,
-                ),
-            )
-
-    return known_elements, known_pairs
+    (element.database_id,) = conn.execute(
+        "SELECT id FROM element WHERE name = ?",
+        (element.name,),
+    ).fetchone()
 
 
-def record_known_element(name: str) -> Path:
-    try:
-        d = directory / f"_{name}" if name.startswith("_") else directory / name
-        d.mkdir(exist_ok=True)
-    except OSError:
-        d = directory / encode_invalid_name(name)
-        d.mkdir(exist_ok=True)
+def _upsert_pair(conn: sqlite3.Connection, pair: Pair) -> None:
+    # first, insert the elements:
+    for element in pair.elements:
+        if element.database_id is not None:
+            continue
 
-    return d
+        _upsert_element(conn, element)
+
+    # now, record the pair:
+    conn.execute(
+        """
+        INSERT INTO pair (first_element_id, second_element_id, result_element_id, is_discovery)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(first_element_id, second_element_id) DO UPDATE SET
+        result_element_id = excluded.result_element_id,
+        is_discovery = MAX(is_discovery, excluded.is_discovery)
+        """,
+        (*(e.database_id for e in pair.elements), 1 if pair.is_discovery else 0),
+    )
 
 
 def record_pair(pair: Pair) -> None:
-    assert pair.output is not None
+    with connect() as conn:
+        _upsert_pair(conn, pair)
 
-    first_dir = record_known_element(pair.inputs[0])
-    second_name = record_known_element(pair.inputs[1]).name
-    record_known_element(pair.output)
 
-    with (first_dir / second_name).open("w") as f:
-        f.write(pair.output)
+def _select_pending_pairs(
+    conn: sqlite3.Connection,
+) -> Generator[PendingPair, None, None]:
+    result = conn.execute(
+        """
+        SELECT
+            first.id,
+            first.name,
+            first.emoji,
+            second.id,
+            second.name,
+            second.emoji
+        FROM element AS first
+        LEFT JOIN element AS second ON first.name <= second.name
+        LEFT JOIN pair ON pair.first_element_id = first.id AND pair.second_element_id = second.id
+        WHERE pair.id IS NULL
+        ORDER BY first.id DESC, second.id DESC
+        """,
+    )
+
+    for row in result:
+        first_id, first_name, first_emoji, second_id, second_name, second_emoji = row
+
+        yield PendingPair(
+            Element(first_name, first_emoji, first_id),
+            Element(second_name, second_emoji, second_id),
+        )
+
+
+def select_pending_pairs() -> Generator[PendingPair, None, None]:
+    with connect() as conn:
+        yield from _select_pending_pairs(conn)
+
+
+with connect() as conn:
+    for e in (
+        Element("Fire", "\N{FIRE}"),
+        Element("Earth", "\N{EARTH GLOBE EUROPE-AFRICA}"),
+        Element("Water", "\N{DROPLET}"),
+        Element("Wind", "\N{WIND BLOWING FACE}\N{VARIATION SELECTOR-16}"),
+    ):
+        _upsert_element(conn, e)
