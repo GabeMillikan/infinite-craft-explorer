@@ -26,8 +26,7 @@ class Element:
 
     @property
     def numeric(self) -> bool:
-        numeric_char_count = sum(len(match) for match in re.findall(r"\d+", self.name))
-        return numeric_char_count > 2
+        return re.search(r"\d", self.name) is None
 
 
 class PendingPair:
