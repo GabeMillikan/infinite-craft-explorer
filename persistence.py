@@ -1,3 +1,4 @@
+import random
 import sqlite3
 from typing import Generator
 
@@ -84,8 +85,19 @@ def record_pair(pair: Pair) -> None:
 def _select_pending_pairs(
     conn: sqlite3.Connection,
 ) -> Generator[PendingPair, None, None]:
+    (order,) = random.choices(
+        [
+            "first.id DESC, second.id DESC",
+            "first.id ASC, second.id DESC",
+            "first.id DESC, second.id ASC",
+            "first.id ASC, second.id ASC",
+        ],
+        weights=[0.8, 0.05, 0.05, 0.1],
+        k=1,
+    )
+
     result = conn.execute(
-        """
+        f"""
         SELECT
             first.id,
             first.name,
@@ -97,7 +109,7 @@ def _select_pending_pairs(
         LEFT JOIN element AS second ON first.name <= second.name
         LEFT JOIN pair ON pair.first_element_id = first.id AND pair.second_element_id = second.id
         WHERE pair.id IS NULL
-        ORDER BY first.id DESC, second.id DESC
+        ORDER BY {order}
         """,
     )
 
