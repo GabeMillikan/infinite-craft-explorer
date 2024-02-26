@@ -126,6 +126,21 @@ def select_pending_pairs() -> Generator[PendingPair, None, None]:
         yield from _select_pending_pairs(conn)
 
 
+def _element_count(conn: sqlite3.Connection) -> int:
+    (count,) = conn.execute("SELECT COUNT(*) FROM element").fetchone()
+    return count
+
+
+def _pair_count(conn: sqlite3.Connection) -> int:
+    (count,) = conn.execute("SELECT COUNT(*) FROM pair").fetchone()
+    return count
+
+
+def counts() -> tuple[int, int]:
+    with connect() as conn:
+        return _element_count(conn), _pair_count(conn)
+
+
 with connect() as conn:
     primary_elements = [
         Element("Fire", "\N{FIRE}"),

@@ -129,6 +129,8 @@ with (
     pending_pair_generator = persistence.select_pending_pairs()
     futures: dict[PendingPair, Future[Pair]] = {}
 
+    last_status_line_length = 0
+
     while True:
         try:
             # clear out completed futures
@@ -141,12 +143,29 @@ with (
                     pending_pair_generator = None
 
                 pair = future.result()
-                print(pair)
                 persistence.record_pair(pair)
                 del futures[pending_pair]
 
+                pair_str = str(pair)
+                print(
+                    pair_str,
+                    end=" " * max(last_status_line_length - len(pair_str), 0)
+                    + "        \n",
+                )
+
+                last_status_line_length = 0
+
             if pending_pair_generator is None:
                 pending_pair_generator = persistence.select_pending_pairs()
+
+                element_count, pair_count = persistence.counts()
+                possible_pair_count = (
+                    element_count**2 + element_count
+                ) // 2  # ncr(n, 2) + n
+
+                status_line = f"Explored {pair_count:,d} / {possible_pair_count:,d} = {pair_count / possible_pair_count:.3%} of pairs"
+                last_status_line_length = len(status_line)
+                print(status_line, end="\r")
 
             if len(futures) <= WORKERS:
                 for pending_pair in pending_pair_generator:

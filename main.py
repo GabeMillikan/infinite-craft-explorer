@@ -106,6 +106,7 @@ def make_pair_exp_backoff(
 with chrome.driver() as driver:
     driver.get("https://neal.fun/infinite-craft")
     last_sleep_ended_at = 0
+    last_status_line_length = 0
 
     while True:
         for pending_pair in persistence.select_pending_pairs():
@@ -117,8 +118,18 @@ with chrome.driver() as driver:
             sys.exit()
 
         pair = make_pair_exp_backoff(driver, pending_pair)
-        print(pair)
         persistence.record_pair(pair)
+        element_count, pair_count = persistence.counts()
+        possible_pair_count = (element_count**2 + element_count) // 2  # ncr(n, 2) + n
+
+        pair_str = str(pair)
+        print(
+            pair_str,
+            end=" " * max(last_status_line_length - len(pair_str), 0) + "        \n",
+        )
+        status_line = f"Explored {pair_count:,d} / {possible_pair_count:,d} = {pair_count / possible_pair_count:.3%} of pairs"
+        last_status_line_length = len(status_line)
+        print(status_line, end="\r")
 
         already_slept = time.perf_counter() - last_sleep_ended_at
         sleep_remaining = args.seconds_per_request - already_slept
