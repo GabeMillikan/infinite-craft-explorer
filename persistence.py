@@ -89,10 +89,9 @@ def _select_pending_pairs(
         [
             "first.id DESC, second.id DESC",
             "first.id ASC, second.id DESC",
-            "first.id DESC, second.id ASC",
             "first.id ASC, second.id ASC",
         ],
-        weights=[0.8, 0.05, 0.05, 0.1],
+        weights=[0.8, 0.1, 0.1],
         k=1,
     )
 
@@ -128,10 +127,17 @@ def select_pending_pairs() -> Generator[PendingPair, None, None]:
 
 
 with connect() as conn:
-    for e in (
+    primary_elements = [
         Element("Fire", "\N{FIRE}"),
         Element("Earth", "\N{EARTH GLOBE EUROPE-AFRICA}"),
         Element("Water", "\N{DROPLET}"),
         Element("Wind", "\N{WIND BLOWING FACE}\N{VARIATION SELECTOR-16}"),
-    ):
+    ]
+
+    # The search order is "mostly deterministic" on the macroscopic scale
+    # so randomize the order of the primary elements so that everyone who runs
+    # this code gets one of 4! (factorial) possible "macroscopic routes"
+    random.shuffle(primary_elements)
+
+    for e in primary_elements:
         _upsert_element(conn, e)
