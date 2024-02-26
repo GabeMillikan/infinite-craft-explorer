@@ -48,3 +48,21 @@ will produce "❓ Nothing". Getting stuck in this rut of producing Nothing thous
 - 10% - `ORDER BY first.id ASC, second.id DESC`
 
 The exact distribution was picked arbitrarily, feel free to change it (or use a different ordering method entirely). PRs welcome to make this adjustable via CLI.
+
+### Results
+After running the script for one hour, I received the following results:
+- Performed 6662 element combinations (pairs).
+- Found 1421 elements.
+- Discovered 154 new elements.
+
+Here are some of my favorite New Discoveries (note that most of the ingredients required for these discoveries were also new discoveries):
+- 🔥🌎🌌 Sin Multiverse + 🤖🙏 The Robot Jesus Show = 🤖 The Robot Jesus Show Multiverse
+- 👨‍ Trombone Man + 🎺 Zombie Trombone = 🧟‍♂️ Zombie Trombone Man
+- 🌈 Rainbow Toast + 🍞 Wasabi Toast = 🌈🍞 Rainbow Wasabi Toast
+- 💒 Salvation + 🍞 Wasabi Toast = 🍞 Salvation Toast
+- ⛪️ The Holy Temple Trinity + 🎭 The Sabbath Theater = 🎭 The Holy Sabbath Theater
+- 🌴 Palmer + 🌲 Surfing Tree = 🏄‍♂️ Surfing Palmer
+- 🏄‍♂️💰 Surfing Billionaire + 🍹 Sweet Tea Toto = 💰 Sweet Tea Billionaire
+- 🏈 The Patriots + 🐟 The Sabbath Swordfish = ⚔️ The New England Swordfish
+- 🔥👿👼 The Divine Comedy + 🏋️‍♂️ The Weekend Warrior = 🙏 The Divine Weekend
+- 🎰 Sin City + 🌎 The Middle = ➗ Sin Average
