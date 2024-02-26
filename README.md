@@ -1,5 +1,6 @@
 # Infinite Craft Explorer
-![Code_I3hHdBbjxb](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/ceedf0a4-f42b-4c66-8cad-c2615e6408e2)
+![Code_wMj78ToIdG](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/7485ee15-71a4-4b38-b65c-af45a4269437)
+
 
 This code simply iterates through every possible combination of elements, and saves their pairings into an SQLite database.
 Additionally, it avoids pairing "numeric elements" since that typically ends up going down an endless rabbit hole of uninteresting numeric discoveries.
