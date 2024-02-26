@@ -22,6 +22,16 @@ parser.add_argument(
         """,
     ).strip(),
 )
+parser.add_argument(
+    "--seconds-per-request",
+    type=float,
+    default=0.5,
+    help=dedent(
+        """
+            How long to wait between firing requests.
+        """,
+    ).strip(),
+)
 args = parser.parse_args()
 
 
@@ -95,6 +105,7 @@ def make_pair_exp_backoff(
 
 with chrome.driver() as driver:
     driver.get("https://neal.fun/infinite-craft")
+    last_sleep_ended_at = 0
 
     while True:
         for pending_pair in persistence.select_pending_pairs():
@@ -109,4 +120,8 @@ with chrome.driver() as driver:
         print(pair)
         persistence.record_pair(pair)
 
-        time.sleep(0.25)
+        already_slept = time.perf_counter() - last_sleep_ended_at
+        sleep_remaining = args.seconds_per_request - already_slept
+        if sleep_remaining > 0:
+            time.sleep(args.seconds_per_request - already_slept)
+        last_sleep_ended_at = time.perf_counter()
