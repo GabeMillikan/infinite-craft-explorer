@@ -98,7 +98,7 @@ with chrome.driver() as driver:
 
     while True:
         for pending_pair in persistence.select_pending_pairs():
-            if not args.allow_numbers and pending_pair.mostly_numeric:
+            if not args.allow_numbers and pending_pair.numeric:
                 continue
             break
         else:

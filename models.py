@@ -25,9 +25,9 @@ class Element:
         return repr(str(self))
 
     @property
-    def mostly_numeric(self) -> bool:
+    def numeric(self) -> bool:
         numeric_char_count = sum(len(match) for match in re.findall(r"\d+", self.name))
-        return numeric_char_count / len(self.name) > 0.5
+        return numeric_char_count > 2
 
 
 class PendingPair:
@@ -49,8 +49,8 @@ class PendingPair:
         return f"{self.first!r} + {self.second!r}"
 
     @property
-    def mostly_numeric(self) -> bool:
-        return self.first.mostly_numeric and self.second.mostly_numeric
+    def numeric(self) -> bool:
+        return self.first.numeric or self.second.numeric
 
 
 class Pair(PendingPair):
