@@ -7,7 +7,6 @@ from textwrap import dedent
 import api
 import cloudflare
 import persistence
-from models import Element, Pair, PendingPair
 
 directory = Path(__file__).parent
 
@@ -38,6 +37,7 @@ args = parser.parse_args()
 
 if __name__ == "__main__":
     headers = cloudflare.get_headers()
+    timed_out = set()
 
     last_status_line_length = 0
     last_sleep_ended_at = 0
@@ -45,12 +45,20 @@ if __name__ == "__main__":
         for pending_pair in persistence.select_pending_pairs():
             if not args.allow_numbers and pending_pair.numeric:
                 continue
+            if pending_pair in timed_out:
+                continue
             break
         else:
             print("All possible pairs explored! There are no other possible pairings!")
             sys.exit()
 
-        pair = api.make_pair_exp_backoff(pending_pair, headers)
+        try:
+            pair = api.make_pair_exp_backoff(pending_pair, headers, timeout=5)
+        except TimeoutError:
+            print(f"Timed out while trying to make pair, moving on: {pending_pair}")
+            timed_out.add(pending_pair)
+            continue
+
         persistence.record_pair(pair)
         element_count, pair_count = persistence.counts()
         possible_pair_count = (element_count**2 + element_count) // 2  # ncr(n, 2) + n
