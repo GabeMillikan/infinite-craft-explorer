@@ -1,5 +1,5 @@
 # Infinite Craft Explorer
-![Demo](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/7485ee15-71a4-4b38-b65c-af45a4269437)
+![Demo](.readme/demo.gif)
 
 
 This code simply iterates through every possible combination of elements, and saves their pairings into an SQLite database.
@@ -12,9 +12,12 @@ Additionally, it avoids pairing "numeric elements" since that typically ends up 
 4. Install the dependencies:
     - Windows: `py -m pip install -r requirements.txt`
     - Other: `python3 -m pip install -r requirements.txt`
-5. Run the code!
+5. Run the code
     - Windows: `py main.py`
     - Other: `python3 main.py`
+6. On the first run, enter your networking information in order to bypass the CloudFlare bot detection. See this video tutorial:
+
+![Tutorial](.readme/tutorial.mp4)
 
 Results are printed to the console and stored in `cache.sqlite`.
 
