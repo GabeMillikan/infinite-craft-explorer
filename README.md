@@ -1,17 +1,27 @@
 # Infinite Craft Explorer
-![Code_wMj78ToIdG](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/7485ee15-71a4-4b38-b65c-af45a4269437)
+![Demo](https://github.com/GabeMillikan/infinite-craft-explorer/assets/44247924/7485ee15-71a4-4b38-b65c-af45a4269437)
 
 
 This code simply iterates through every possible combination of elements, and saves their pairings into an SQLite database.
 Additionally, it avoids pairing "numeric elements" since that typically ends up going down an endless rabbit hole of uninteresting numeric discoveries.
 
+# How to Use
+1. Install Python from https://www.python.org/
+2. Download the code
+3. In a terminal, `cd` into the repository
+4. Install the dependencies:
+    - Windows: `py -m pip install -r requirements.txt`
+    - Other: `python3 -m pip install -r requirements.txt`
+5. Run the code!
+    - Windows: `py main.py`
+    - Other: `python3 main.py`
+
+Results are printed to the console and stored in `cache.sqlite`.
+
 # How it Works
 ### API Integration
 The primary endpoint is `https://neal.fun/api/infinite-craft/pair` to determine the result of pairing two elements.
-Cloudflare uses some smart technology to block Python-based `requests.get()` calls (even with header spoofing), so instead, this repository uses Selenium.
-It does't click around on the webpage, though, it simply runs `execute_script` to fire the request via embedded JavaScript. See `execute_request` in [`main.py`](./main.py).
-
-This code waits 0.25 seconds between requests, and implements an exponential backoff strategy when encountering rate limits (or any other errors).
+Cloudflare uses some smart technology to block Python-based `requests.get()` calls (even with header spoofing), so instead, this repository requires you to copy/paste the headers from your normal web browser.
 
 ### Result Persistence (Database)
 Elements and Pairs are saved into two separate SQLite database tables:
