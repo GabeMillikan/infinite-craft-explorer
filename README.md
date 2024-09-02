@@ -17,7 +17,7 @@ Additionally, it avoids pairing "numeric elements" since that typically ends up 
     - Other: `python3 main.py`
 6. On the first run, enter your networking information in order to bypass the CloudFlare bot detection. See this video tutorial:
 
-![Tutorial](.readme/tutorial.mp4)
+![Tutorial](.readme/tutorial.gif)
 
 Results are printed to the console and stored in `cache.sqlite`.
 
