@@ -4,7 +4,8 @@ from argparse import ArgumentParser
 from pathlib import Path
 from textwrap import dedent
 
-import chrome
+import api
+import cloudflare
 import persistence
 from models import Element, Pair, PendingPair
 
@@ -35,79 +36,11 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def execute_request(
-    driver: chrome.webdriver.Chrome,
-    url: str,
-    params: dict[str, str],
-) -> dict:
-    js_code = """
-        var callback = arguments[arguments.length - 1];
-        var url = arguments[0];
-        var params = arguments[1];
+if __name__ == "__main__":
+    headers = cloudflare.get_headers()
 
-        var queryParams = new URLSearchParams(params).toString();
-
-        fetch(`${url}?${queryParams}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok, status: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(data => callback({'data': data}))
-            .catch(error => callback({'error': error.message}));
-    """
-    result = driver.execute_async_script(js_code, url, params)
-
-    if "error" in result:
-        raise ValueError(result["error"])
-
-    return result["data"]
-
-
-def make_pair(
-    driver: chrome.webdriver.Chrome,
-    pair: PendingPair,
-) -> Pair:
-    response = execute_request(
-        driver,
-        "https://neal.fun/api/infinite-craft/pair",
-        {"first": pair.first.name, "second": pair.second.name},
-    )
-
-    if "result" not in response:
-        msg = f"Invalid response: {response!r}"
-        raise ValueError(msg)
-
-    return Pair(
-        pair.first,
-        pair.second,
-        Element(response["result"], response.get("emoji")),
-        response.get("isNew"),
-    )
-
-
-def make_pair_exp_backoff(
-    driver: chrome.webdriver.Chrome,
-    pair: PendingPair,
-) -> Pair:
-    backoff = 1
-    while True:
-        try:
-            return make_pair(driver, pair)
-        except Exception as e:
-            print(f"Failed: {e}\n\nTrying again in {backoff} second(s)")
-            time.sleep(backoff / 2)
-            driver.refresh()
-            time.sleep(backoff / 2)
-            backoff *= 2
-
-
-with chrome.driver() as driver:
-    driver.get("https://neal.fun/infinite-craft")
-    last_sleep_ended_at = 0
     last_status_line_length = 0
-
+    last_sleep_ended_at = 0
     while True:
         for pending_pair in persistence.select_pending_pairs():
             if not args.allow_numbers and pending_pair.numeric:
@@ -117,7 +50,7 @@ with chrome.driver() as driver:
             print("All possible pairs explored! There are no other possible pairings!")
             sys.exit()
 
-        pair = make_pair_exp_backoff(driver, pending_pair)
+        pair = api.make_pair_exp_backoff(pending_pair, headers)
         persistence.record_pair(pair)
         element_count, pair_count = persistence.counts()
         possible_pair_count = (element_count**2 + element_count) // 2  # ncr(n, 2) + n
