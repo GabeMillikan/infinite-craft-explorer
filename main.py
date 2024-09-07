@@ -1,6 +1,7 @@
 import sys
 import time
 from argparse import ArgumentParser
+from base64 import b64encode
 from pathlib import Path
 from textwrap import dedent
 
@@ -11,6 +12,20 @@ import persistence
 directory = Path(__file__).parent
 
 parser = ArgumentParser()
+parser.add_argument(
+    "command",
+    type=str,
+    choices=["scan", "dump"],
+    default="scan",
+    nargs="?",
+    help=dedent(
+        """
+            The program which should be run:
+                scan: Create database schemas, if they don't already exist.
+                backfill: Fetch all calls from CallRail and fill the database.
+        """,
+    ).strip(),
+)
 parser.add_argument(
     "--allow-numbers",
     action="store_true",
@@ -32,10 +47,9 @@ parser.add_argument(
         """,
     ).strip(),
 )
-args = parser.parse_args()
 
 
-if __name__ == "__main__":
+def scan(allow_numbers: bool, seconds_per_request: float) -> None:
     headers = cloudflare.get_headers()
     timed_out = set()
 
@@ -43,7 +57,7 @@ if __name__ == "__main__":
     last_sleep_ended_at = 0
     while True:
         for pending_pair in persistence.select_pending_pairs():
-            if not args.allow_numbers and pending_pair.numeric:
+            if not allow_numbers and pending_pair.numeric:
                 continue
             if pending_pair in timed_out:
                 continue
@@ -73,7 +87,64 @@ if __name__ == "__main__":
         print(status_line, end="\r")
 
         already_slept = time.perf_counter() - last_sleep_ended_at
-        sleep_remaining = args.seconds_per_request - already_slept
+        sleep_remaining = seconds_per_request - already_slept
         if sleep_remaining > 0:
-            time.sleep(args.seconds_per_request - already_slept)
+            time.sleep(seconds_per_request - already_slept)
         last_sleep_ended_at = time.perf_counter()
+
+
+def dump() -> None:
+    def b64(x: str) -> str:
+        return b64encode(x.encode()).decode()
+
+    lines = []
+    last_print_at = time.perf_counter()
+    n, _ = persistence.counts()
+    for i, (element, discovered) in enumerate(
+        persistence.select_elements_and_discovered(),
+    ):
+        lines.append(f"{b64(element.emoji)},{b64(element.name)},{discovered:d}")
+
+        now = time.perf_counter()
+        if now - last_print_at > 1:
+            print(f"Loaded: {i + 1}/{n}", end="\r")
+            last_print_at = now
+
+    data = " ".join(lines)
+
+    print(
+        dedent(
+            f"""
+            let data = "{data}";
+            let storage = JSON.parse(localStorage.getItem("infinite-craft-data")) || {{}};
+            storage.elements = storage.elements || [];
+
+            const nameSet = new Set(storage.elements.map(element => element.text));
+
+            function b64(x) {{
+                return decodeURIComponent(escape(atob(x)));
+            }}
+
+            data.split(" ").forEach(line => {{
+                let [emoji, name, discovered] = line.split(",");
+                emoji = b64(emoji);
+                name = b64(name);
+                discovered = discovered === "1";
+
+                if (!nameSet.has(name)) {{
+                    storage.elements.push({{ text: name, emoji: emoji, discovered: discovered }});
+                }}
+            }});
+
+            localStorage.setItem("infinite-craft-data", JSON.stringify(storage));
+            """,
+        ).strip(),
+    )
+
+
+if __name__ == "__main__":
+    args = parser.parse_args()
+    if args.command == "scan":
+        scan(args.allow_numbers, args.seconds_per_request)
+    elif args.command == "dump":
+        dump()

@@ -141,6 +141,32 @@ def counts() -> tuple[int, int]:
         return _element_count(conn), _pair_count(conn)
 
 
+def _select_elements_and_discovered(
+    conn: sqlite3.Connection,
+) -> Generator[tuple[Element, bool], None, None]:
+    result = conn.execute(
+        """
+        SELECT
+            e.name,
+            e.emoji,
+            e.id,
+            EXISTS (SELECT 1 FROM pair p WHERE p.result_element_id = e.id AND p.is_discovery) AS is_discovery
+        FROM element e
+        ORDER BY id ASC
+        """,
+    )
+
+    for row in result:
+        *e, is_discovery = row
+
+        yield Element(*e), is_discovery
+
+
+def select_elements_and_discovered() -> Generator[tuple[Element, bool], None, None]:
+    with connect() as conn:
+        return _select_elements_and_discovered(conn)
+
+
 with connect() as conn:
     primary_elements = [
         Element("Fire", "\N{FIRE}"),
