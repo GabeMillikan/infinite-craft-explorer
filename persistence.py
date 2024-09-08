@@ -85,14 +85,12 @@ def record_pair(pair: Pair) -> None:
 def _select_pending_pairs(
     conn: sqlite3.Connection,
 ) -> Generator[PendingPair, None, None]:
-    (order,) = random.choices(
-        [
+    order = random.choice(
+        (
             "first.id DESC, second.id DESC",
             "first.id ASC, second.id DESC",
             "first.id ASC, second.id ASC",
-        ],
-        weights=[0.8, 0.1, 0.1],
-        k=1,
+        ),
     )
 
     result = conn.execute(
@@ -150,9 +148,13 @@ def _select_elements_and_discovered(
             e.name,
             e.emoji,
             e.id,
-            EXISTS (SELECT 1 FROM pair p WHERE p.result_element_id = e.id AND p.is_discovery) AS is_discovery
+            MAX(p.result_element_id IS NOT NULL) AS is_discovery
         FROM element e
-        ORDER BY id ASC
+        LEFT JOIN pair p
+            ON p.result_element_id = e.id
+            AND p.is_discovery = TRUE
+        GROUP BY e.name, e.emoji, e.id
+        ORDER BY e.id ASC
         """,
     )
 

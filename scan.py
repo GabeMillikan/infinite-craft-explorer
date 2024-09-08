@@ -171,4 +171,4 @@ def scan(allow_numbers: bool, seconds_per_request: float, threads: int) -> None:
 
 
 if __name__ == "__main__":
-    scan(False, 0.25, 4)
+    scan(False, 0.25, 8)
