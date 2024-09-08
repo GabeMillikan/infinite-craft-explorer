@@ -47,13 +47,13 @@ def prompt_for_headers() -> dict[str, str]:
         )
 
 
-def verify_headers(headers: dict[str, str]) -> bool:
+def verify_headers(headers: dict[str, str]) -> Exception | None:
     try:
         api.raw_make_pair("Fire", "Water", headers)
-    except Exception:
-        return False
+    except Exception as e:
+        return e
 
-    return True
+    return None
 
 
 def get_headers(verify: bool = True) -> dict[str, str]:
@@ -71,9 +71,12 @@ def get_headers(verify: bool = True) -> dict[str, str]:
             filename.unlink()
 
     headers = prompt_for_headers()
-    if verify and not verify_headers(headers):
-        print("Those headers are not valid! Try again.\n")
-        return get_headers(verify)
+    if verify:
+        error = verify_headers(headers)
+        if error is not None:
+            print(f"Those headers are not valid! Error: {error!r}")
+            print("Try again.\n")
+            return get_headers(verify)
 
     with contextlib.suppress(Exception), filename.open("w") as f:
         json.dump(headers, f, indent=2)
