@@ -72,23 +72,29 @@ def handle_completed_futures(
     failed: Failed,
     timeout: float,
 ) -> None:
+    n_elements, n_pairs = persistence.counts()
+    log_line = f"Pairs: {n_pairs:,d}  Elements: {n_elements:,d}"
+
     for future in as_completed(futures, timeout=timeout):
         pending_pair = futures.pop(future)
         try:
             pair = future.result()
         except TimeoutError:
-            print(f"[API TIMED OUT] {pending_pair}")
+            print(f"[API TIMED OUT] {pending_pair}".ljust(len(log_line)))
+            print(log_line, end="\r")
             failed.add(pending_pair)
             continue
         except Exception as e:
-            print(f"[API FAILED - {e!r}] {pending_pair}")
+            print(f"[API FAILED - {e!r}] {pending_pair}".ljust(len(log_line)))
+            print(log_line, end="\r")
             failed.add(pending_pair)
             continue
 
         try:
             persistence.record_pair(pair)
         except Exception as e:
-            print(f"[DATABASE FAILED - {e!r}] {pair}")
+            print(f"[DATABASE FAILED - {e!r}] {pair}".ljust(len(log_line)))
+            print(log_line, end="\r")
             failed.add(pending_pair)
             continue
 
