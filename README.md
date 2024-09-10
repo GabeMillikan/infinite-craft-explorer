@@ -5,6 +5,8 @@
 This code simply iterates through every possible combination of elements, and saves their pairings into an SQLite database.
 Additionally, it avoids pairing "numeric elements" since that typically ends up going down an endless rabbit hole of uninteresting numeric discoveries.
 
+If you just want to grab some data, or want to jump-start your exploration with a large database, see the [Releases](https://github.com/GabeMillikan/infinite-craft-explorer/releases).
+
 # How to Use
 1. Install Python from https://www.python.org/
 2. Download the code
