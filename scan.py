@@ -17,8 +17,9 @@ def valid_pending_pairs(
     *,
     failed: Failed,
     futures: Futures,
+    order: persistence.PendingPairOrder,
 ) -> Generator[PendingPair, None, None]:
-    for pending_pair in persistence.select_pending_pairs():
+    for pending_pair in persistence.select_pending_pairs(order):
         if not allow_numbers and pending_pair.numeric:
             continue
 
@@ -55,11 +56,13 @@ def push_one_future(
     allow_numbers: bool,
     failed: Failed,
     headers: Headers,
+    order: persistence.PendingPairOrder,
 ) -> bool:
     for pending_pair in valid_pending_pairs(
         allow_numbers,
         failed=failed,
         futures=futures,
+        order=order,
     ):
         queue_pair(executor, pending_pair, futures, headers=headers)
         return True
@@ -71,7 +74,7 @@ def handle_completed_futures(
     *,
     failed: Failed,
     timeout: float,
-) -> None:
+) -> Generator[Pair | None, None, None]:
     n_elements, n_pairs = persistence.counts()
     log_line = f"Pairs: {n_pairs:,d}  Elements: {n_elements:,d}"
 
@@ -83,11 +86,13 @@ def handle_completed_futures(
             print(f"[API TIMED OUT] {pending_pair}".ljust(len(log_line)))
             print(log_line, end="\r")
             failed.add(pending_pair)
+            yield None
             continue
         except Exception as e:
             print(f"[API FAILED - {e!r}] {pending_pair}".ljust(len(log_line)))
             print(log_line, end="\r")
             failed.add(pending_pair)
+            yield None
             continue
 
         try:
@@ -96,7 +101,10 @@ def handle_completed_futures(
             print(f"[DATABASE FAILED - {e!r}] {pair}".ljust(len(log_line)))
             print(log_line, end="\r")
             failed.add(pending_pair)
+            yield None
             continue
+
+        yield pair
 
         n_elements, n_pairs = persistence.counts()
         log_line = f"Pairs: {n_pairs:,d}  Elements: {n_elements:,d}"
@@ -115,6 +123,8 @@ def scan(allow_numbers: bool, seconds_per_request: float, threads: int) -> None:
     headers: Headers = cloudflare.get_headers()
     failed: Failed = set()
     futures: Futures = {}
+
+    orders = persistence.PENDING_PAIR_ORDERS.copy()
 
     with ThreadPoolExecutor(threads) as executor:
 
@@ -141,6 +151,7 @@ def scan(allow_numbers: bool, seconds_per_request: float, threads: int) -> None:
                     allow_numbers=allow_numbers,
                     failed=failed,
                     headers=headers,
+                    order=orders[0],
                 )
 
                 if not pushed:
@@ -154,11 +165,13 @@ def scan(allow_numbers: bool, seconds_per_request: float, threads: int) -> None:
 
             next_future_at = now() + seconds_per_request
             try:
-                handle_completed_futures(
+                for pair in handle_completed_futures(
                     futures,
                     failed=failed,
                     timeout=next_future_at - now(),
-                )
+                ):
+                    if not pair or pair.result.name.lower() == "nothing":
+                        orders.insert(0, orders.pop())
             except TimeoutError:
                 pass
             except:

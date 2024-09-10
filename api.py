@@ -57,17 +57,24 @@ def make_pair_exp_backoff(
     started_at = time.perf_counter()
     backoff = 1
     while True:
+        exc = None
         try:
             eta = timeout - (time.perf_counter() - started_at)
             return make_pair(pair, headers, timeout=eta)
+        except requests.RequestsError as e:
+            if e.args and e.args[0].startswith("HTTP Error 500:"):
+                raise  # don't bother retrying
+            exc = e
         except Exception as e:
-            eta = timeout - (time.perf_counter() - started_at)
-            if eta < backoff:
-                msg = f"Ran out of time while making the pair: {pair}"
-                raise TimeoutError(msg) from e
+            exc = e
 
-            time.sleep(backoff)
-            backoff = min(backoff * 2, 60)
+        eta = timeout - (time.perf_counter() - started_at)
+        if eta < backoff:
+            msg = f"Ran out of time while making the pair: {pair}"
+            raise TimeoutError(msg) from exc
+
+        time.sleep(backoff)
+        backoff = min(backoff * 2, 60)
 
 
 if __name__ == "__main__":

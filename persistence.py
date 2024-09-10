@@ -1,6 +1,6 @@
 import random
 import sqlite3
-from typing import Generator
+from typing import Generator, Literal
 
 from models import Element, Pair, PendingPair
 
@@ -82,17 +82,22 @@ def record_pair(pair: Pair) -> None:
         _upsert_pair(conn, pair)
 
 
+PendingPairOrder = Literal[
+    "first.id DESC, second.id DESC",
+    "first.id ASC, second.id DESC",
+    "first.id ASC, second.id ASC",
+]
+PENDING_PAIR_ORDERS: list[PendingPairOrder] = [
+    "first.id DESC, second.id DESC",
+    "first.id ASC, second.id DESC",
+    "first.id ASC, second.id ASC",
+]
+
+
 def _select_pending_pairs(
     conn: sqlite3.Connection,
+    order: PendingPairOrder = PENDING_PAIR_ORDERS[0],
 ) -> Generator[PendingPair, None, None]:
-    order = random.choice(
-        (
-            "first.id DESC, second.id DESC",
-            "first.id ASC, second.id DESC",
-            "first.id ASC, second.id ASC",
-        ),
-    )
-
     result = conn.execute(
         f"""
         SELECT
@@ -119,9 +124,9 @@ def _select_pending_pairs(
         )
 
 
-def select_pending_pairs() -> Generator[PendingPair, None, None]:
+def select_pending_pairs(order: PendingPairOrder) -> Generator[PendingPair, None, None]:
     with connect() as conn:
-        yield from _select_pending_pairs(conn)
+        yield from _select_pending_pairs(conn, order)
 
 
 def _element_count(conn: sqlite3.Connection) -> int:

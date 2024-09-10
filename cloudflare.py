@@ -61,12 +61,11 @@ def get_headers(verify: bool = True) -> dict[str, str]:
     try:
         with filename.open() as f:
             headers = json.load(f)
-    except Exception:
+    except Exception as e:
         pass
     else:
-        if not verify or verify_headers(headers):
+        if verify and verify_headers(headers) is None:
             return headers
-
         with contextlib.suppress(Exception):
             filename.unlink()
 
